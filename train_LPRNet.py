@@ -33,14 +33,23 @@ def sparse_tuple_for_ctc(T_length, lengths):
 def adjust_learning_rate(optimizer, cur_epoch, base_lr, lr_schedule):
     """
     Sets the learning rate
+    修复版: 当 Epoch 超过 schedule 最大值时，保持最低学习率，而不是重置。
     """
     lr = 0
     for i, e in enumerate(lr_schedule):
         if cur_epoch < e:
             lr = base_lr * (0.1 ** i)
             break
+            
+    # --- 修复逻辑开始 ---
+    # 如果 cur_epoch 超过了 schedule 的所有节点 (比如 Epoch 25 > 16)
+    # 这里的 lr 还是 0。
+    # 我们不应该把它重置为 base_lr，而应该让它等于列表里最后一档的更小一级
     if lr == 0:
-        lr = base_lr
+        # 比如 schedule 有 5 个节点，那就用 0.1^5 = 0.00001
+        lr = base_lr * (0.1 ** len(lr_schedule))
+    # --- 修复逻辑结束 ---
+
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
@@ -48,15 +57,15 @@ def adjust_learning_rate(optimizer, cur_epoch, base_lr, lr_schedule):
 
 def get_parser():
     parser = argparse.ArgumentParser(description='parameters to train net')
-    parser.add_argument('--max_epoch', default=15, help='epoch to train the network')
+    parser.add_argument('--max_epoch', default=15, type=int, help='epoch to train the network')
     parser.add_argument('--img_size', default=[94, 24], help='the image size')
     parser.add_argument('--train_img_dirs', default="~/workspace/trainMixLPR", help='the train images path')
     parser.add_argument('--test_img_dirs', default="~/workspace/testMixLPR", help='the test images path')
-    parser.add_argument('--dropout_rate', default=0.5, help='dropout rate.')
-    parser.add_argument('--learning_rate', default=0.1, help='base value of learning rate.')
-    parser.add_argument('--lpr_max_len', default=8, help='license plate number max length.')
-    parser.add_argument('--train_batch_size', default=128, help='training batch size.')
-    parser.add_argument('--test_batch_size', default=120, help='testing batch size.')
+    parser.add_argument('--dropout_rate', default=0.5, type=float, help='dropout rate.')
+    parser.add_argument('--learning_rate', default=0.001, type=float, help='base value of learning rate.')
+    parser.add_argument('--lpr_max_len', default=8, type=int, help='license plate number max length.')
+    parser.add_argument('--train_batch_size', default=128, type=int, help='training batch size.')
+    parser.add_argument('--test_batch_size', default=120, type=int, help='testing batch size.')
     parser.add_argument('--phase_train', default=True, type=bool, help='train or test phase flag.')
     parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
     parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
@@ -65,9 +74,8 @@ def get_parser():
     parser.add_argument('--test_interval', default=2000, type=int, help='interval for evaluate')
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', default=2e-5, type=float, help='Weight decay for SGD')
-    parser.add_argument('--lr_schedule', default=[4, 8, 12, 14, 16], help='schedule for learning rate.')
+    parser.add_argument('--lr_schedule', default=[4, 8, 12, 14, 16], nargs='+', type=int, help='schedule for learning rate.')
     parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
-    # parser.add_argument('--pretrained_model', default='./weights/Final_LPRNet_model.pth', help='pretrained base model')
     parser.add_argument('--pretrained_model', default='', help='pretrained base model')
 
     args = parser.parse_args()
@@ -83,7 +91,7 @@ def collate_fn(batch):
         imgs.append(torch.from_numpy(img))
         labels.extend(label)
         lengths.append(length)
-    labels = np.asarray(labels).flatten().astype(np.int)
+    labels = np.asarray(labels).flatten().astype(int)
 
     return (torch.stack(imgs, 0), torch.from_numpy(labels), lengths)
 
@@ -220,7 +228,7 @@ def Greedy_Decode_Eval(Net, datasets, args):
             label = labels[start:start+length]
             targets.append(label)
             start += length
-        targets = np.array([el.numpy() for el in targets])
+        targets = [el.numpy() for el in targets]
 
         if args.cuda:
             images = Variable(images.cuda())

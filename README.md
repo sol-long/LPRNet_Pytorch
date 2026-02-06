@@ -12,6 +12,15 @@ Pytorch Implementation For LPRNet, A High Performance And Lightweight License Pl
 - Pillow
 - numpy
 
+# 个人使用依赖
+
+- pytorch 2.9.1+cu128
+- opencv-python 4.13.0.90
+- python 3.12
+- imutils 0.5.4
+- Pillow 12.1.0
+- numpy 2.4.1
+
 # pretrained model
 
 * [pretrained_model](https://github.com/sirius-ai/LPRNet_Pytorch/tree/master/weights/)

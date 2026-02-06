@@ -1,0 +1,7 @@
+python train_LPRNet.py ^
+    --train_img_dirs "D:\WorkSpace\LPRNET\CCPD_YOLO_POSE_LPRNet_Aligned\train" ^
+    --test_img_dirs "D:\WorkSpace\LPRNET\CCPD_YOLO_POSE_LPRNet_Aligned\val" ^
+    --max_epoch 100 ^
+    --train_batch_size 64 ^
+    --save_folder "./weights" ^
+ | Tee-Object -FilePath "train_log.txt"
